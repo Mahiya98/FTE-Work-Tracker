@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FTE Work Update Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>📊 FTE Work Update Dashboard</h1>
+    <p id="lastUpdate">Loading...</p>
+  </header>
+
+  <section class="filters">
+    <div class="filter-group">
+      <label for="sbuFilter">SBU</label>
+      <select id="sbuFilter"><option value="All">All</option></select>
+    </div>
+    <div class="filter-group">
+      <label for="sectionFilter">Section</label>
+      <select id="sectionFilter"><option value="All">All</option></select>
+    </div>
+    <div class="filter-group">
+      <label for="roleFilter">Role</label>
+      <select id="roleFilter"><option value="All">All</option></select>
+    </div>
+    <button id="resetBtn">Reset Filters</button>
+  </section>
+
+  <section class="kpis">
+    <div class="kpi-card"><h3>Total Records</h3><p id="totalRows">0</p></div>
+    <div class="kpi-card"><h3>Previous Head Count</h3><p id="prevHC">0</p></div>
+    <div class="kpi-card"><h3>Justified Head Count</h3><p id="justHC">0</p></div>
+    <div class="kpi-card"><h3>Variance</h3><p id="variance">0</p></div>
+  </section>
+
+  <section class="chart-section">
+    <canvas id="hcChart"></canvas>
+  </section>
+
+  <section class="table-section">
+    <div class="table-wrapper">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Date</th><th>SBU</th><th>Section</th>
+            <th>Work Center</th><th>Role</th>
+            <th>Previous HC</th><th>Justified HC</th><th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer><p>Built with ❤️ | Auto-syncs with Google Sheets</p></footer>
+  <script src="script.js"></script>
+</body>
+</html>
