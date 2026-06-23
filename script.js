@@ -6,21 +6,44 @@ let chart;
 async function loadData() {
   try {
     const res = await fetch(SHEET_CSV_URL);
-    const csv = await res.text();
-    const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
-    allData = parsed.data.filter(r => r.SBU); // skip blanks
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    let csv = await res.text();
+
+    // 🔑 FIX 1: Remove leading empty lines (your Row 1 is blank)
+    csv = csv.replace(/^(\s*,*\s*\r?\n)+/, "");
+
+    const parsed = Papa.parse(csv, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: h => h.trim()   // 🔑 FIX 2: trim header whitespace
+    });
+
+    console.log("Headers detected:", parsed.meta.fields);
+    console.log("Sample row:", parsed.data[0]);
+
+    // 🔑 FIX 3: keep rows that have ANY meaningful data, not just SBU
+    allData = parsed.data.filter(r =>
+      Object.values(r).some(v => v && String(v).trim() !== "")
+    );
+
+    if (allData.length === 0) {
+      throw new Error("Parsed 0 rows. Check that the sheet is published as CSV.");
+    }
+
     populateFilters();
     renderDashboard();
     document.getElementById("lastUpdate").textContent =
-      "Last refreshed: " + new Date().toLocaleString();
+      "Last refreshed: " + new Date().toLocaleString() +
+      " | " + allData.length + " records loaded";
   } catch (e) {
     console.error("Failed to load sheet:", e);
-    alert("Error loading data. Make sure the sheet is published to web.");
+    document.getElementById("lastUpdate").textContent =
+      "⚠️ Error: " + e.message;
   }
 }
 
 function uniqueValues(key) {
-  return [...new Set(allData.map(r => (r[key] || "").trim()).filter(Boolean))].sort();
+  return [...new Set(allData.map(r => (r[key] || "").toString().trim()).filter(Boolean))].sort();
 }
 
 function populateFilters() {
@@ -34,7 +57,8 @@ function fillSelect(id, values) {
   sel.innerHTML = `<option value="All">All</option>`;
   values.forEach(v => {
     const opt = document.createElement("option");
-    opt.value = v; opt.textContent = v;
+    opt.value = v;
+    opt.textContent = v;
     sel.appendChild(opt);
   });
 }
@@ -44,9 +68,9 @@ function applyFilters() {
   const section = document.getElementById("sectionFilter").value;
   const role = document.getElementById("roleFilter").value;
   return allData.filter(r =>
-    (sbu === "All" || r.SBU === sbu) &&
-    (section === "All" || r.Section === section) &&
-    (role === "All" || r.Role === role)
+    (sbu === "All" || (r.SBU || "").trim() === sbu) &&
+    (section === "All" || (r.Section || "").trim() === section) &&
+    (role === "All" || (r.Role || "").trim() === role)
   );
 }
 
@@ -82,7 +106,7 @@ function renderTable(data) {
 function renderChart(data) {
   const grouped = {};
   data.forEach(r => {
-    const key = r.Section || "Unknown";
+    const key = (r.Section || "Unknown").trim();
     if (!grouped[key]) grouped[key] = { prev: 0, just: 0 };
     grouped[key].prev += parseFloat(r["Previous Head Count"]) || 0;
     grouped[key].just += parseFloat(r["Justified Head Count"]) || 0;
@@ -108,12 +132,17 @@ function renderChart(data) {
   });
 }
 
-["sbuFilter","sectionFilter","roleFilter"].forEach(id =>
+["sbuFilter", "sectionFilter", "roleFilter"].forEach(id =>
   document.getElementById(id).addEventListener("change", renderDashboard)
 );
 document.getElementById("resetBtn").addEventListener("click", () => {
-  ["sbuFilter","sectionFilter","roleFilter"].forEach(id => document.getElementById(id).value = "All");
+  ["sbuFilter", "sectionFilter", "roleFilter"].forEach(id => {
+    document.getElementById(id).value = "All";
+  });
   renderDashboard();
 });
 
 loadData();
+
+// Optional: auto-refresh every 5 minutes
+setInterval(loadData, 5 * 60 * 1000);
